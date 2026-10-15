@@ -12,7 +12,7 @@ jobs:
       - name: Create a Clean, Up-to-Date Python Manifest
         run: |
           # Upgraded to modern, secure patched versions:
-          echo "urllib3==2.2.1" > requirements.txt
+          echo "urllib3>=2.8.0" > requirements.txt
           echo "flask==3.0.3" >> requirements.txt
 
       - name: Run Trivy Security Scanner
