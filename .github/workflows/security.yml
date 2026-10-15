@@ -9,9 +9,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Create a Real Vulnerable Python Manifest
+      - name: Create a Clean, Up-to-Date Python Manifest
         run: |
-          # urllib3 1.24.1 has multiple known High & Critical CVEs (CVE-2019-11324, CVE-2020-26137)
+          # Upgraded to modern, secure patched versions:
           echo "urllib3==2.2.1" > requirements.txt
           echo "flask==3.0.3" >> requirements.txt
 
@@ -21,4 +21,4 @@ jobs:
           scan-type: 'fs'
           format: 'table'
           severity: 'CRITICAL,HIGH'
-          exit-code: '1' # Tells Trivy to FAIL the pipeline on High/Critical!
+          exit-code: '1'
