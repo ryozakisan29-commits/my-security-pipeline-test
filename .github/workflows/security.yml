@@ -1,0 +1,23 @@
+name: Security Scan Test
+
+on: [push]
+
+jobs:
+  security-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create a Fake Vulnerable Dependency File
+        run: |
+          echo '{"name": "test-app", "dependencies": {"lodash": "4.17.15"}}' > package.json
+          echo "Created package.json with an old vulnerable library (Lodash 4.17.15 has CVE-2020-8203)!"
+
+      - name: Run Trivy Security & SBOM Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1' # Tells the scanner to FAIL the build if High/Critical is found!
