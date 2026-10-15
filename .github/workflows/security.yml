@@ -12,8 +12,8 @@ jobs:
       - name: Create a Real Vulnerable Python Manifest
         run: |
           # urllib3 1.24.1 has multiple known High & Critical CVEs (CVE-2019-11324, CVE-2020-26137)
-          echo "urllib3==1.24.1" > requirements.txt
-          echo "flask==0.12" >> requirements.txt
+          echo "urllib3==2.2.1" > requirements.txt
+          echo "flask==3.0.3" >> requirements.txt
 
       - name: Run Trivy Security Scanner
         uses: aquasecurity/trivy-action@master
