@@ -1,24 +1,93 @@
-name: Security Scan Test
+name: Enterprise DevSecOps Pipeline
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
-  security-gate:
+  # ==========================================
+  # STAGE 1: BUILD & DEPENDENCY RESOLUTION
+  # ==========================================
+  build:
+    name: Build & Package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Create a Clean, Up-to-Date Python Manifest
-        run: |
-          # Upgraded to modern, secure patched versions:
-          echo "urllib3>=2.8.0" > requirements.txt
-          echo "flask==3.0.3" >> requirements.txt
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: Run Trivy Security Scanner
+      - name: Resolve Dependencies
+        run: |
+          echo "urllib3>=2.8.0" > requirements.txt
+          echo "requests==2.31.0" >> requirements.txt
+          cat requirements.txt
+
+      - name: Upload Manifest as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-manifest
+          path: requirements.txt
+
+  # ==========================================
+  # STAGE 2: SBOM GENERATION (CycloneDX)
+  # ==========================================
+  sbom:
+    name: Generate SBOM
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Manifest Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-manifest
+
+      - name: Generate CycloneDX SBOM
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          format: 'table'
+          format: 'cyclonedx'
+          output: 'sbom.cdx.json'
+
+      - name: Archive SBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: software-bill-of-materials
+          path: sbom.cdx.json
+
+  # ==========================================
+  # STAGE 3: SECURITY SCANNING & SARIF EXPORT
+  # ==========================================
+  security-gate:
+    name: Security Gate & Policy Enforcement
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Manifest Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-manifest
+
+      - name: Run Vulnerability Scan (SARIF Report)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          exit-code: '1'
+          exit-code: '1' # Set to 1 to enforce the security gate
+
+      - name: Upload SARIF to GitHub Security Tab
+        if: always() # Ensures report is uploaded even if build is failed by the gate!
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
